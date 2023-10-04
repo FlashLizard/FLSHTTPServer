@@ -1,11 +1,29 @@
 add_rules("mode.debug", "mode.release")
+add_rules("plugin.compile_commands.autoupdate", {outputdir = ".vscode"})
+add_requires("pthreads4w")
+if is_os("windows") then
+    add_requires("pthreads4w")
+end
+
 
 target("httpSever")
     set_kind("binary")
     add_files("src/*.cpp")
+    add_packages("pthreads4w")
     if is_mode("debug") then
         add_defines("DEBUG")
     end
+    if is_os("windows") then
+        before_build(function (target)
+            print("Now In Windows OS")
+        end)
+        add_packages("pthreads4w")
+    end
+    
+target("testPthread")
+    set_kind("binary")
+    add_files("test/testPthread.cpp")
+
 
 target("client")
     set_kind("phony")
