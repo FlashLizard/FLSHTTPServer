@@ -71,7 +71,12 @@
         "xlocmes": "cpp",
         "xlocmon": "cpp",
         "xloctime": "cpp",
-        "xtree": "cpp"
+        "xtree": "cpp",
+        "regex": "cpp",
+        "set": "cpp",
+        "fstream": "cpp",
+        "coroutine": "cpp",
+        "resumable": "cpp"
     },
     "python.analysis.typeCheckingMode": "basic",
     "xmake.debugConfigType": "codelldb",

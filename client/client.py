@@ -5,7 +5,7 @@ clientSocket = socket(AF_INET, SOCK_STREAM)
 clientSocket.connect((serverName,serverPort))
 print(f'Client is ready to send')
 while(True):
-    sentence = input('Input lowercase sentence:')
+    sentence = input('Input transform data:')
     if(sentence == 'quit'):
         break
     clientSocket.send(str.encode(sentence))

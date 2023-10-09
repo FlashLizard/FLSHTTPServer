@@ -1,11 +1,23 @@
+#ifndef FLS_LOG
+#define FLS_LOG
 #include <cstdio>
 #include <cstring>
 
 namespace Log
 {
+    const extern int Debug;
+    const extern int Warn;
+    const extern int Info;
+    const extern int Error;
+    const extern int None;
+
+    extern int globalLevel;
+
     template<typename... Args>
-    void print(const char *prefix, const char *msg,const Args&... args)
+    void print(int level,const char *prefix, const char *msg,const Args&... args)
     {
+        if(level<globalLevel)
+            return;
         printf("[ %s ]", prefix);
         printf(msg, args...);
         printf("\n");
@@ -15,22 +27,24 @@ namespace Log
     void debug(const char *msg, const Args... args)
     {
 #ifdef DEBUG
-        print("DEBUG", msg, args...);
+        print(Debug,"DEBUG", msg, args...);
 #endif
     }
     template<typename... Args>
     void info(const char *msg, const Args... args)
     {
-        print("INFO", msg, args...);
+        print(Info,"INFO", msg, args...);
     }
     template<typename... Args>
     void error(const char *msg, const Args... args)
     {
-        print("ERROR", msg, args...);
+        print(Error,"ERROR", msg, args...);
     }
     template<typename... Args>
     void warn(const char *msg, const Args... args)
     {
-        print("WARN", msg, args...);
+        print(Warn,"WARN", msg, args...);
     }
 }
+
+#endif

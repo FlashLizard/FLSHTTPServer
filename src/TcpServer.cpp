@@ -4,24 +4,24 @@
 #include <mutex>
 #include <vector>
 
-#include "TcpSever.hpp"
+#include "TcpServer.hpp"
 #include "Log.hpp"
 
-ConnectedTcpSocket::ConnectedTcpSocket(SOCKET socket) : socket(socket)
+ConnectedTcpSocket::ConnectedTcpSocket(SOCKET socket, int sid) : socket(socket), sid(sid)
 {
 }
 
-int ConnectedTcpSocket::send(char *data, int len)
+int ConnectedTcpSocket::getSid()
+{
+	return this->sid;
+}
+
+int ConnectedTcpSocket::send(char const *data, int len)
 {
 	return ::send(this->socket, data, len, 0);
 }
 
-int ConnectedTcpSocket::close()
-{
-	return closesocket(this->socket);
-}
-
-TcpSocket::TcpSocket(string ipAddr, int port, TcpCallback (*genTcpCallback)()) : ipAddr(ipAddr), port(port), genTcpCallback(genTcpCallback)
+TcpSocket::TcpSocket(string ipAddr, int port, TcpCallback callback) : ipAddr(ipAddr), port(port), callback(callback)
 {
 }
 
@@ -88,40 +88,44 @@ int TcpSocket::multiRun()
 	clientAddr.sin_family = AF_INET;
 	addrLen = sizeof(clientAddr);
 
-	auto genSession = [](SOCKET &sessionSocket, int sid, TcpCallback callback)
+	auto genSession = [](SOCKET &sessionSocket, int sid, const TcpCallback &callback)
 	{
-		Log::info("Client%d listen one client request!\n", sid);
 		std::shared_ptr<bool> hadMovePtr = std::make_shared<bool>(false);
-		auto sessionTmp = std::async(std::launch::async, [&sessionSocket, hadMovePtr, sid, callback]()
+		
+		// 异步处理sessionSocket
+		auto sessionTmp = std::async(std::launch::async, [&sessionSocket, hadMovePtr, sid, &callback]()
 									 {
 			auto socket = std::move(sessionSocket);
-			auto connection = ConnectedTcpSocket(socket);
+			auto connection = ConnectedTcpSocket(socket, sid);
 			*hadMovePtr = true;
 			// 设置接收缓冲区
-			char recvBuf[4096];
+			char recvBuf[MAX_BUFFER_SIZE];
 			while (true)
 			{
-				memset(recvBuf, '\0', 4096);
-				int rtn = recv(socket, recvBuf, 256, 0);
+				memset(recvBuf, '\0', sizeof(recvBuf));
+				int rtn = recv(socket, recvBuf, sizeof(recvBuf), 0);
+				bool status = true;
 				if (rtn > 0)
 				{
-					Log::debug("Received %d bytes from client%d: %s\n", rtn, sid, recvBuf);
-					callback(connection, recvBuf, rtn);
+					Log::info("Received %d bytes from Client%d: \n%s\n", rtn, sid, recvBuf);
 					Log::debug("callback client%d", sid);
+					status = callback(connection, recvBuf, rtn);
 				}
-				else
+				if (!status||rtn == 0)
 				{ // 否则是收到了客户端断开连接的请求，也算可读事件。但rtn = 0
 					Log::info("Client%d leaving ...\n", sid);
-					int status = connection.close(); // 既然client离开了，就关闭sessionSocket
+					int status = closesocket(socket); // 既然client离开了，就关闭sessionSocket
 					if (status == SOCKET_ERROR)
 					{
 						Log::error("Client%d close fail", sid);
 						return 2;
 					}
-					Log::info("Client%d Close Success", sid);
+					Log::debug("Client%d Close Success", sid);
 					return 0;
 				}
 			} });
+
+		// 等待sessionSocket被move, 否则可能在sessionSocket被move之前sessionSocket被析构
 		while (!(*hadMovePtr))
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -129,7 +133,7 @@ int TcpSocket::multiRun()
 		return sessionTmp;
 	};
 	SOCKET sessionSocket;
-	std::vector<std::future<int> > sessionList;
+	std::vector<std::future<int>> sessionList;
 	while (true)
 	{
 		Log::debug("wait for new accept");
@@ -138,8 +142,13 @@ int TcpSocket::multiRun()
 		{
 			this->clientCnt++;
 			auto sid = this->clientCnt;
-			auto callback = this->genTcpCallback();
-			sessionList.push_back(genSession(sessionSocket, sid, callback));
+			Log::info("Client%d connected (From %u.%u.%u.%u:%u)\n", sid,
+					  clientAddr.sin_addr.S_un.S_un_b.s_b1,
+					  clientAddr.sin_addr.S_un.S_un_b.s_b2,
+					  clientAddr.sin_addr.S_un.S_un_b.s_b3,
+					  clientAddr.sin_addr.S_un.S_un_b.s_b4,
+					  clientAddr.sin_port);
+			sessionList.push_back(genSession(sessionSocket, sid, this->callback));
 		}
 	}
 }
