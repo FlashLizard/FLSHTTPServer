@@ -52,6 +52,7 @@ int main()
 	server.run();
     return 0;
 }
+```
 
 - Server.hpp
 
@@ -66,13 +67,15 @@ int main()
     Server server(ipAddr, port, rootPath);
     server.run();
 }
+```
 
 ## 简单测试
 
 下载安装xmake, 并在项目根目录下执行
+
 ```sh
 xmake build httpServer
 xmake run httpServer
 ```
 
-成功运行后, 可用浏览器访问 http://localhost:5050/ 查看具体效果.
+成功运行后, 可用浏览器访问 <http://localhost:5050/> 查看具体效果.
