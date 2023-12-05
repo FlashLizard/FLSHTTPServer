@@ -25,7 +25,7 @@ bool Server::callback(int sid, const http::HttpRequest &request, http::HttpRespo
     {
         try
         {
-            outResponse.setField("Connection", "close");
+            outResponse.setField("Connection", "keep-alive");
             outResponse.statusCode = "200";
             outResponse.statusMessage = "OK";
             file.seekg(0, file.end);
@@ -68,6 +68,10 @@ bool Server::callback(int sid, const http::HttpRequest &request, http::HttpRespo
                 else if (ext == "ico")
                 {
                     outResponse.setField("Content-Type", "image/x-icon");
+                }
+                else if (ext == "pdf")
+                {
+                    outResponse.setField("Content-Type", "application/pdf");
                 }
             }
             return true;

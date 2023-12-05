@@ -107,6 +107,7 @@ namespace http
 		if (parseRequest(recvData, len, request))
 		{
 			status = this->httpCallback(socket.getSid(), request, response);
+			response.setField("Content-Length", std::to_string(response.body.size()));
 		}
 		else
 		{
